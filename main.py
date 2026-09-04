@@ -1,5 +1,8 @@
+from src import logger
+
+
 def main():
-    print("Hello from kidney-disease!")
+    logger.info("Hello from kidney-disease!")
 
 
 if __name__ == "__main__":
