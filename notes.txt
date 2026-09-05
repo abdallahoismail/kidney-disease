@@ -1,0 +1,172 @@
+BoxConfig is a class of data structure similar to a python dictionary but has more features in indexing values with their keys
+
+type checking:
+import os
+from box.exceptions import BoxValueError
+import yaml
+from cnnClassifier import logger
+import json
+import joblib
+from ensure import ensure_annotations
+from box import ConfigBox
+from pathlib import Path
+from typing import Any
+import base64
+
+
+
+@ensure_annotations
+def read_yaml(path_to_yaml: Path) -> ConfigBox:
+    """reads yaml file and returns
+
+    Args:
+        path_to_yaml (str): path like input
+
+    Raises:
+        ValueError: if yaml file is empty
+        e: empty file
+
+    Returns:
+        ConfigBox: ConfigBox type
+    """
+    try:
+        with open(path_to_yaml) as yaml_file:
+            content = yaml.safe_load(yaml_file)
+            logger.info(f"yaml file: {path_to_yaml} loaded successfully")
+            return ConfigBox(content)
+    except BoxValueError:
+        raise ValueError("yaml file is empty")
+    except Exception as e:
+        raise e
+    
+
+
+@ensure_annotations
+def create_directories(path_to_directories: list, verbose=True):
+    """create list of directories
+
+    Args:
+        path_to_directories (list): list of path of directories
+        ignore_log (bool, optional): ignore if multiple dirs is to be created. Defaults to False.
+    """
+    for path in path_to_directories:
+        os.makedirs(path, exist_ok=True)
+        if verbose:
+            logger.info(f"created directory at: {path}")
+
+
+@ensure_annotations
+def save_json(path: Path, data: dict):
+    """save json data
+
+    Args:
+        path (Path): path to json file
+        data (dict): data to be saved in json file
+    """
+    with open(path, "w") as f:
+        json.dump(data, f, indent=4)
+
+    logger.info(f"json file saved at: {path}")
+
+
+
+
+@ensure_annotations
+def load_json(path: Path) -> ConfigBox:
+    """load json files data
+
+    Args:
+        path (Path): path to json file
+
+    Returns:
+        ConfigBox: data as class attributes instead of dict
+    """
+    with open(path) as f:
+        content = json.load(f)
+
+    logger.info(f"json file loaded succesfully from: {path}")
+    return ConfigBox(content)
+
+
+@ensure_annotations
+def save_bin(data: Any, path: Path):
+    """save binary file
+
+    Args:
+        data (Any): data to be saved as binary
+        path (Path): path to binary file
+    """
+    joblib.dump(value=data, filename=path)
+    logger.info(f"binary file saved at: {path}")
+
+
+@ensure_annotations
+def load_bin(path: Path) -> Any:
+    """load binary data
+
+    Args:
+        path (Path): path to binary file
+
+    Returns:
+        Any: object stored in the file
+    """
+    data = joblib.load(path)
+    logger.info(f"binary file loaded from: {path}")
+    return data
+
+@ensure_annotations
+def get_size(path: Path) -> str:
+    """get size in KB
+
+    Args:
+        path (Path): path of the file
+
+    Returns:
+        str: size in KB
+    """
+    size_in_kb = round(os.path.getsize(path)/1024)
+    return f"~ {size_in_kb} KB"
+
+
+def decodeImage(imgstring, fileName):
+    imgdata = base64.b64decode(imgstring)
+    with open(fileName, 'wb') as f:
+        f.write(imgdata)
+        f.close()
+
+
+def encodeImageIntoBase64(croppedImagePath):
+    with open(croppedImagePath, "rb") as f:
+        return base64.b64encode(f.read())
+
+Using the third-party library ensure and its @ensure_annotations decorator still does not make your Python code statically typed.
+Instead, it forces Python to perform runtime type enforcement. [1, 2] 
+While it achieves the behavior you might want (crashing when the wrong type is passed), there is a massive conceptual and performance difference between doing this at runtime versus true static typing.
+## Static Typing vs. Runtime Enforcement
+To understand why @ensure_annotations isn't static typing, look at how the two approaches handle type errors:
+
+| Feature | Static Type Checking (e.g., Mypy, Pyright) | Runtime Enforcement (@ensure_annotations) |
+|---|---|---|
+| When it catches errors | Before the code runs (during development/CI). | During execution (only when that specific line of code runs). |
+| Performance Impact | Zero. Type checking happens entirely outside of production execution. | High. It inspects arguments and wraps functions, slowing down every single function call. |
+| Code Coverage | Scans 100% of your codebase for potential logical type flaws. | Only checks the exact lines of code that are actively triggered by your current runtime path or tests. |
+
+## How @ensure_annotations Works Under the Hood
+As users note on [Stack Overflow](https://stackoverflow.com/questions/32684720/how-do-i-ensure-parameter-is-correct-type-in-python), libraries like ensure provide decorators that act as interceptors. When you decorate a function, ensure dynamically intercepts the incoming arguments, checks them against the __annotations__ dictionary, and throws an exception if they don't match: [3, 4, 5] 
+
+from ensure import ensure_annotations
+
+@ensure_annotationsdef greeting(name: str) -> str:
+    return "Hello, " + name
+# This will now explicitly raise an EnsureError AT RUNTIME
+greeting(42) 
+
+## Why You Might Want to Avoid It in Production
+While it seems convenient, using runtime decorators for type safety has major drawbacks:
+
+   1. Performance Overhead: Running type checks inside a wrapper function on every single call adds a massive CPU penalty, making it ill-suited for performance-critical production apps.
+   2. Brittle Architectures: Statically typed languages prevent the app from even launching if there's a type error. A runtime checker will let the app launch and run flawlessly—until a user hits a specific edge case that triggers the type mismatch, crashing the server in production.
+
+## What should you do instead?
+If you want the safety of catching errors early, stick to Mypy or Pyright for development. If you need to validate that external data (like JSON from a web request) matches a specific type structure at runtime, use Pydantic, which is heavily optimized, faster, and the industry standard for runtime data validation. [6] 
+Are you trying to catch bugs while writing code, or are you looking to validate data coming from external inputs (like APIs or databases)?
