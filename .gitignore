@@ -1,10 +1,66 @@
-# Python-generated files
+# Python cache and build artifacts
 __pycache__/
 *.py[oc]
 build/
 dist/
 wheels/
 *.egg-info
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
 
-# Virtual environments
-.venv
+# Virtual environments and local Python tooling
+.venv/
+venv/
+env/
+.env/
+.python-version
+
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+*.secret
+*.secrets
+*.key
+*.pem
+*.p12
+*.crt
+secrets/
+
+# Datasets and generated ML artifacts
+data/
+datasets/
+artifacts/
+models/
+checkpoints/
+*.pkl
+*.pickle
+*.joblib
+*.h5
+*.hdf5
+*.pt
+*.pth
+*.onnx
+*.safetensors
+
+# Experiment tracking and generated reports
+logs/
+mlruns/
+wandb/
+tensorboard/
+outputs/
+reports/figures/
+
+# Notebook checkpoints
+.ipynb_checkpoints/
+
+# IDE and editor files
+.vscode/
+.idea/
+
+# macOS and OS-generated files
+.DS_Store
+._*
